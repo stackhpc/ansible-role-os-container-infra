@@ -113,13 +113,14 @@ def main():
 
     tries = 0
     fail_after = 100
+    changed = False
     while True:
         container_infra_details = get_update_or_create_container_infra(magnum_client, module, **kwargs)
         display.warning(container_infra_details)
         if container_infra_details:
             stack_id = container_infra_details.stack_id
             display.warning(stack_id)
-            module.exit_json(changed=False, details=stack_id)
+            module.exit_json(changed=changed, details=stack_id)
         else:
             # Wait until this is not False
             if fail_after < tries:
@@ -129,6 +130,7 @@ def main():
                 display.warning('Tries: [{}/{}]'.format(tries, fail_after))
                 time.sleep(10)
                 tries += 1
+                changed = True
 
 if __name__ == '__main__':
     main()
