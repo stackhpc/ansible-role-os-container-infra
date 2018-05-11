@@ -1,17 +1,14 @@
 ---
 
-- name: Get magnum access info
+- name: Get container infra details
   os_container_infra:
-    cloud_name: "{{ os_container_infra_config.cloud_name }}"
-    magnum_endpoint: "{{ os_container_infra_config.magnum_endpoint }}"
-    cluster_name: "{{ os_container_infra_config.cluster_name }}"
-    cluster_template_name: "{{ os_container_infra_config.cluster_template_name }}"
-    master_count: "{{ os_container_infra_config.master_count }}"
-    node_count: "{{ os_container_infra_config.node_count }}"
-    keypair: "{{ os_container_infra_config.keypair }}"
-  register: os_container_infra_result
+    cloud_name: "{{ os_container_infra_config_cloud_name }}"
+    create_if_not_found: "{{ os_container_infra_config_create_if_not_found }}"
+    cluster_name: "{{ os_container_infra_config_cluster_name }}"
+    cluster_template_name: "{{ os_container_infra_config_cluster_template_name }}"
+    master_count: "{{ os_container_infra_config_master_count }}"
+    node_count: "{{ os_container_infra_config_node_count }}"
+    keypair: "{{ os_container_infra_config_keypair }}"
+  register: results
   become: no
-
-- debug: var=os_container_infra_result
-
-- fail:
+- debug: msg="{{ results['container_infra'] | from_json }}"
