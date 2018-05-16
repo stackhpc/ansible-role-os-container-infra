@@ -1,69 +1,87 @@
 OpenStack Container Clusters
 ============================
 
-This role can be used to register container cluster templates in Magnum
-using the Magnum CLI.
+This role can be used to manipulate container cluster in Magnum using the
+Magnum python client.
 
 Requirements
 ------------
 
-The OpenStack Magnum API should be accessible from the target host.
+- python 2.6+
+- openstacksdk
+- python-magnumclient
+- python-heatclient
+- python-novaclient
 
 Role Variables
 --------------
 
-`os_container_infra_config.endpoint` is the endpoint for Magnum API.
-
-`os_container_infra_config.name` is the name to call the cluster.
-
-`os_container_infra_config.template` is the cluster template to use for the cluster.
-
-`os_container_infra_config.keypair` is the keypair to use to access the cluster nodes.
-
-`os_container_infra_config.master_count` is the number of master nodes.
-
-`os_container_infra_config.node_count` is the number of worker nodes.
-
-`os_container_infra_config.interfaces` is a list of additional network interfaces to
-attach to the cluster since Magnum only allows attachment of one network
-interface by default.
+`os_container_infra_cloud` is the name of the cloud inside cloud.yaml.
+`os_container_infra_user` is the name of the cloud inside cloud.yaml.
+`os_container_infra_state` must be either present or absent.
+`os_container_infra_cluster_name` is the name of the cluster.
+`os_container_infra_cluster_template_name` is the cluster template to use for the cluster.
+`os_container_infra_keypair` is the keypair to use to access the cluster nodes.
+`os_container_infra_master_count` is the number of master nodes.
+`os_container_infra_node_count` is the number of worker nodes.
+`os_container_infra_public_interface` is the interface on which a cluster can be accessed publicly.
+`os_container_infra_interfaces` is a list of additional network interfaces to
+attach to the servers in a cluster since Magnum only allows attachment of one
+network interface by default.
 
 Example Playbook
 ----------------
 
-The following playbook registers a cluster template.
+The following playbook creates a cluster, attaches two interfaces to servers in
+the cluster and creates an inventory file.
 
-    ---
-    - hosts: all
-      vars:
-        my_cloud_config: |
-          ---
-          clouds:
-            mycloud:
-              auth:
-                auth_url: http://openstack.example.com:5000
-                project_name: p3
-                username: user
-                password: secretpassword
-              region: RegionOne
-          my_container_infra_config: |
-            ---
-            cloud_name: mycloud
-            magnum_endpoint: http://openstack.example.com:9511/v1
-            cluster_name: test-cluster
-            cluster_template_name: swarm-fedora-atomic-27
-            keypair: default
-            master_count: 1
-            node_count: 1
-            interfaces:
-             - p3-lln
-             - p3-bdn
-      ...
-      roles:
-      - { role: stackhpc.os-config,
-          os_config_content: "{{ my_cloud_config }}" }
-      - { role: stackhpc.os-container-infra,
-          os_container_infra_config: "{{ my_container_infra_config | from_yaml }}"}
+  ---
+  - hosts: localhost
+    become: False
+    gather_facts: False
+    roles:
+    - role: stackhpc.os-config
+      os_config_content: |
+        ---
+        clouds:
+          mycloud:
+            auth:
+              auth_url: http://10.60.253.1:5000
+              project_name: p3
+              username: username
+              password: password
+              user_domain_name: Default
+              project_domain_name: Default
+            auth_type: password
+            region: RegionOne
+        ...
+    - role: stackhpc.os-container-infra
+      os_container_infra_cloud: mycloud
+      os_container_infra_user: fedora
+      os_container_infra_state: present
+      os_container_infra_cluster_name: test-cluster
+      os_container_infra_cluster_template_name: swarm-fedora-atomic-27
+      os_container_infra_keypair: default
+      os_container_infra_master_count: 1
+      os_container_infra_node_count: 1
+      os_container_infra_public_interface: p3-internal
+      os_container_infra_interfaces:
+      - p3-lln
+      - p3-bdn
+  ...
+
+Ansible Debug Info
+------------------
+
+To view warnings emitted by this role, export the following
+following variable before running ansible:
+
+	export ANSIBLE_LOG_PATH=ansible.log
+	export ANSIBLE_DEBUG=1
+
+To filter these warnings:
+
+	tail -f ansible.log | grep DEBUG
 
 License
 -------
