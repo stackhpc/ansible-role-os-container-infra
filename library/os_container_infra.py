@@ -1,22 +1,79 @@
 #!/usr/bin/env python
 #
-# This script allows a user to create, scale (update)  or get inventory of a
-# Magnum cluster. It is essential that a cluster template already exists before
-# cluster creation or scaling is requested.
-#
-# To view warnings emitted by this script, export the following
-# following variable before running ansible:
-#
-#   export ANSIBLE_LOG_PATH=ansible.log
-#   export ANSIBLE_DEBUG=1
-#
-# To filter these warnings:
-#
-#   tail -f ansible.log | grep WARNING
+# Copyright (c) 2018 StackHPC Ltd.
+# Apache 2 Licence
+
+from __future__ import absolute_import, division, print_function
+__metaclass__ = type
+
+ANSIBLE_METADATA = {'metadata_version': '1.1',
+                    'status': ['preview'],
+                    'supported_by': 'community'}
+
+DOCUMENTATION = '''
+---
+module: os_container_infra
+short_description: Create, update and delete container infra.
+author: bharat@stackhpc.com
+version_added: "1.0"
+description:
+    -  Create, update and delete container infra using Openstack Magnum API.
+notes:
+    - This module creates a new top-level C(container_infra) fact, which
+      contains information about Magnum container infrastructure.
+requirements:
+    - "python >= 2.6"
+    - "openstacksdk"
+    - "python-magnumclient"
+options:
+   cloud:
+     description:
+       - Cloud name inside cloud.yaml file.
+     type: str
+   state:
+     description:
+       - Must be `present` or `absent`.
+     type: str
+   cluster_name:
+     description:
+        - Magnum cluster name or uuid.
+     type: str
+   cluster_template_name:
+     description:
+        - Magnum cluster template name or uuid.
+     type: str
+   master_count:
+     description:
+        - Number of master nodes.
+     type: int
+     default: 1
+   node_count:
+     description:
+        - Number of worker nodes.
+     type: int
+     default: 1
+   keypair:
+     description:
+        - Keypair name or uuid to use for authentication.
+     type: str
+extends_documentation_fragment: openstack
+'''
+
+EXAMPLES = '''
+# Gather facts about all resources under <stack_id>:
+- os_container_infra:
+    cloud: mycloud
+    stack_id: xxxxx-xxxxx-xxxx-xxxx
+    nested_depth: 4
+    filters:
+      resource_type: OS::Nova::Server
+- debug:
+    var: stack_facts
+'''
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible.utils.display import Display
-from magnumclient.client import Client as MagnumClient
+from magnumclient.client import Client
 from magnumclient.exceptions import *
 import openstack
 import time
@@ -35,18 +92,17 @@ class ContainerInfra(object):
         self.keypair = kwargs['keypair']
         self.state = kwargs['state'].lower()
 
-        self.connect(kwargs['cloud_name'])
-        self.cluster_template_id = self.magnum_client.cluster_templates.get(kwargs['cluster_template_name']).uuid
+        self.connect(kwargs['cloud'])
+        self.cluster_template_id = self.client.cluster_templates.get(kwargs['cluster_template_name']).uuid
         
-        self.result = None
-        self.result_dict = dict()
+        self.result = dict()
 
-    def connect(self, cloud_name):
-        self.os_cloud = openstack.connect(cloud=cloud_name)
-        self.os_cloud.authorize()
-        self.magnum_client = MagnumClient('1', endpoint_override=False, session=self.os_cloud.session)
+    def connect(self, cloud):
+        self.cloud = openstack.connect(cloud=cloud)
+        self.cloud.authorize()
+        self.client = Client('1', endpoint_override=False, session=self.cloud.session)
 
-    def get(self):
+    def apply(self):
         tries = 0
         fail_after = 100
         changed = False
@@ -54,28 +110,27 @@ class ContainerInfra(object):
             try:
                 # Get cluster info or raise WaitCondition if a new one is created.
                 try:
-                    result = self.magnum_client.clusters.get(self.name)
-                    self.result = result
-                    self.result_dict = result.to_dict()
+                    self.result = self.client.clusters.get(self.name).to_dict()
                 except NotFound as e:
                     # Create new cluster here if no cluster with the name was found
                     if self.state == 'present':
                         self.create()
                     elif self.state == 'absent':
                         return changed
+                status = self.result['status']
                 # If the cluster is in a failed status, raise error:
-                if result.status.endswith('FAILED'):
-                    raise OpenStackError("Cluster is not usable because: {}.".format(result.faults))
+                if status.endswith('FAILED'):
+                    raise OpenStackError(self.result['faults'])
                 # If the cluster creation and update is in progress:
-                elif result.status.endswith('PROGRESS'):
-                    raise WaitCondition(result.status)
+                elif status.endswith('PROGRESS'):
+                    raise WaitCondition(status)
                 # Since the cluster looks ready, raise a WaitCondition if cluster is updated.
-                elif result.status.endswith('COMPLETE'):
+                elif status.endswith('COMPLETE'):
                     self.update()
                     return changed
                 # This should never be the case but just in case, lets try and catch it.
                 else:
-                    raise OpenStackError("Cluster returned unexpected status: {}".format(result.status))
+                    raise OpenStackError(self.result['faults'])
             except WaitCondition as e:
                 # This is taking far too long, terminate.
                 if fail_after < tries:
@@ -89,7 +144,7 @@ class ContainerInfra(object):
 
     def create(self):
         # Create a cluster with parameters initialised with
-        self.magnum_client.clusters.create(
+        self.client.clusters.create(
             name=self.name,
             cluster_template_id=self.cluster_template_id,
             master_count=self.master_count,
@@ -99,12 +154,8 @@ class ContainerInfra(object):
         raise WaitCondition("Cluster called {} does not exist, creating new.".format(self.name))
 
     def update(self):
-        # Get result if it hasnt been queried yet
-        if self.result == None:
-            self.get()
-        
         # Raise module error if there is a mismatch between cluster template ids
-        cluster_template_mismatch = self.cluster_template_id != self.result.cluster_template_id 
+        cluster_template_mismatch = self.cluster_template_id != self.result['cluster_template_id']
         if cluster_template_mismatch:
             raise ValueError("Cluster's current template name does not match provided template name.")
 
@@ -113,31 +164,31 @@ class ContainerInfra(object):
             patch_list = list()
 
             # Update number of masters if there is a mismatch
-            master_count_mismatch = self.master_count != self.result.master_count
+            master_count_mismatch = self.master_count != self.result['master_count']
             if master_count_mismatch:
                 patch = dict(op='replace', value=self.master_count, path='/master_count')
                 patch_list.append(patch)
 
             # Update number of nodes if there is a mismatch
-            node_count_mismatch = self.node_count != self.result.node_count
+            node_count_mismatch = self.node_count != self.result['node_count']
             if node_count_mismatch:
                 patch = dict(op='replace', value=self.node_count, path='/node_count')
                 patch_list.append(patch)
 
             # There appears to be a patch needed to apply
             if len(patch_list) > 0:
-                self.magnum_client.clusters.update(self.result.uuid, patch_list)
+                self.client.clusters.update(self.result['uuid'], patch_list)
                 raise WaitCondition("Applying patch to the cluster: {}".format(patch_list))
 
         # Since the cluster exists but the requested state is absent, delete the cluster
         elif self.state == 'absent':
-            self.magnum_client.clusters.delete(self.result.uuid)
-            raise WaitCondition("Deleting cluster: {}".format(self.result.uuid))
+            self.client.clusters.delete(self.result['uuid'])
+            raise WaitCondition("Deleting cluster: {}".format(self.result['uuid']))
         
 if __name__ == '__main__':
     module = AnsibleModule(
         argument_spec = dict(
-            cloud_name=dict(required=True, type='str'),
+            cloud=dict(required=True, type='str'),
             state=dict(default='present', choices=['present','absent']),
             cluster_name=dict(required=True, type='str'),
             cluster_template_name=dict(required=True, type='str'),
@@ -151,7 +202,7 @@ if __name__ == '__main__':
     display = Display()
 
     container_infra = ContainerInfra(**module.params)
-    changed = container_infra.get()
-    result_dict = container_infra.result_dict
 
-    module.exit_json(changed=changed, container_infra=result_dict)
+    changed = container_infra.apply()
+
+    module.exit_json(changed=changed, ansible_facts=dict(container_infra=container_infra.result))
