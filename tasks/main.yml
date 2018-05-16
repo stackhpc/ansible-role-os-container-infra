@@ -1,14 +1,34 @@
 ---
-
 - name: Get container infra details
   os_container_infra:
-    cloud_name: "{{ os_container_infra_config_cloud_name }}"
-    create_if_not_found: "{{ os_container_infra_config_create_if_not_found }}"
-    cluster_name: "{{ os_container_infra_config_cluster_name }}"
-    cluster_template_name: "{{ os_container_infra_config_cluster_template_name }}"
-    master_count: "{{ os_container_infra_config_master_count }}"
-    node_count: "{{ os_container_infra_config_node_count }}"
-    keypair: "{{ os_container_infra_config_keypair }}"
-  register: results
-  become: no
-- debug: msg="{{ results['container_infra'] | from_json }}"
+    cloud: "{{ os_container_infra_cloud }}"
+    state: "{{ os_container_infra_state }}"
+    cluster_name: "{{ os_container_infra_cluster_name }}"
+    cluster_template_name: "{{ os_container_infra_cluster_template_name }}"
+    master_count: "{{ os_container_infra_master_count }}"
+    node_count: "{{ os_container_infra_node_count }}"
+    keypair: "{{ os_container_infra_keypair }}"
+
+- name: Get stack facts
+  os_stack_facts:
+    cloud: "{{ os_container_infra_cloud }}"
+    stack_id: "{{ container_infra.stack_id }}"
+    nested_depth: 4
+    filters:
+      resource_type: 'OS::Nova::Server'
+
+- name: Attach interfaces to servers
+  os_server_interface:
+    cloud: "{{ os_container_infra_cloud }}"
+    server_id: "{{ item['physical_resource_id'] }}"
+    interfaces: "{{ os_container_infra_interfaces }}"
+    state: present
+  register: server_interface_facts
+  with_items:
+  - "{{ stack_facts }}"
+
+- name: Generate cluster inventory
+  template:
+    src: container_infra_inventory.j2
+    dest: ./container_infra_inventory
+...
