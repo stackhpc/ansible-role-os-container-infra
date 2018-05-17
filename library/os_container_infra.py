@@ -63,12 +63,14 @@ EXAMPLES = '''
 # Gather facts about all resources under <stack_id>:
 - os_container_infra:
     cloud: mycloud
-    stack_id: xxxxx-xxxxx-xxxx-xxxx
-    nested_depth: 4
-    filters:
-      resource_type: OS::Nova::Server
+    state: present
+    cluster_name: test-cluster
+    cluster_template_name: swarm-fedora-atomic-27
+    master_count: 1
+    node_count: 1
+    keypair: default
 - debug:
-    var: stack_facts
+    var: container_infra
 '''
 
 from ansible.module_utils.basic import AnsibleModule
@@ -203,6 +205,9 @@ if __name__ == '__main__':
 
     container_infra = ContainerInfra(**module.params)
 
-    changed = container_infra.apply()
+    try:
+        changed = container_infra.apply()
+    except Exception as e:
+        module.fail_json(msg=repr(e))
 
     module.exit_json(changed=changed, ansible_facts=dict(container_infra=container_infra.result))

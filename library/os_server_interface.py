@@ -13,7 +13,7 @@ ANSIBLE_METADATA = {'metadata_version': '1.1',
 DOCUMENTATION = '''
 ---
 module: os_server_interface
-short_description: Create, update and delete container infra.
+short_description: Create, update and delete server interface.
 author: bharat@stackhpc.com
 version_added: "1.0"
 description:
@@ -40,13 +40,13 @@ options:
      type: str
    interfaces:
      description:
-        - List of network interfaces.
+        - List of network interface names.
      type: list of str
 extends_documentation_fragment: openstack
 '''
 
 EXAMPLES = '''
-# Gather facts about all resources under <stack_id>:
+# Attach interfaces to <server_id>:
 - os_container_infra:
     cloud: mycloud
     state: present
@@ -56,7 +56,7 @@ EXAMPLES = '''
     - p3-bdn
   register: result
 - debug:
-    var: result['server_interface']
+    var: result
 '''
 
 from ansible.module_utils.basic import AnsibleModule
@@ -73,7 +73,6 @@ class ServerInterface(object):
     
         self.connect(kwargs['cloud'])
         self.interfaces = [self.cloud.network.find_network(interface) for interface in kwargs['interfaces']]
-        self.result = dict()
 
     def connect(self, cloud):
         self.cloud = openstack.connect(cloud=cloud)
@@ -103,7 +102,10 @@ class ServerInterface(object):
             if interface_exists == False and self.state == 'present':
                 server.interface_attach(port_id=None, net_id=interface.id, fixed_ip=None)
                 changed = True
-        self.result = self.get_server().networks
+        if changed:
+            self.server = self.get_server()
+        else:
+            self.server = server
         return changed
 
 if __name__ == '__main__':
@@ -121,6 +123,15 @@ if __name__ == '__main__':
 
     server_interface = ServerInterface(**module.params)
 
-    changed = server_interface.apply()
+    try:
+        changed = server_interface.apply()
+    except Exception as e:
+        module.fail_json(msg=repr(e))
 
-    module.exit_json(changed=changed, server_interface=server_interface.result)
+    server = server_interface.server
+
+    module.exit_json(
+        changed=changed,
+        server_name=server.name,
+        server_networks=server.networks,
+    )

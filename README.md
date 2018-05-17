@@ -17,15 +17,16 @@ Role Variables
 --------------
 
 `os_container_infra_cloud` is the name of the cloud inside cloud.yaml.
-`os_container_infra_user` is the name of the cloud inside cloud.yaml.
+`os_container_infra_ssh_user` is the name of the cloud inside cloud.yaml.
 `os_container_infra_state` must be either present or absent.
 `os_container_infra_cluster_name` is the name of the cluster.
 `os_container_infra_cluster_template_name` is the cluster template to use for the cluster.
 `os_container_infra_keypair` is the keypair to use to access the cluster nodes.
 `os_container_infra_master_count` is the number of master nodes.
 `os_container_infra_node_count` is the number of worker nodes.
-`os_container_infra_public_interface` is the interface on which a cluster can be accessed publicly.
-`os_container_infra_interfaces` is a list of additional network interfaces to
+`os_container_infra_external_interface` is the interface on which a cluster can be accessed externally.
+`os_container_infra_interfaces` is a list of additional network interfaces to.
+`os_container_infra_inventory` is the destination where the inventory will be saved to.
 attach to the servers in a cluster since Magnum only allows attachment of one
 network interface by default.
 
@@ -57,14 +58,14 @@ the cluster and creates an inventory file.
         ...
     - role: stackhpc.os-container-infra
       os_container_infra_cloud: mycloud
-      os_container_infra_user: fedora
+      os_container_infra_ssh_user: fedora
       os_container_infra_state: present
       os_container_infra_cluster_name: test-cluster
       os_container_infra_cluster_template_name: swarm-fedora-atomic-27
       os_container_infra_keypair: default
       os_container_infra_master_count: 1
       os_container_infra_node_count: 1
-      os_container_infra_public_interface: p3-internal
+      os_container_infra_external_interface: p3-internal
       os_container_infra_interfaces:
       - p3-lln
       - p3-bdn

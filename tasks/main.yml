@@ -9,26 +9,33 @@
     node_count: "{{ os_container_infra_node_count }}"
     keypair: "{{ os_container_infra_keypair }}"
 
-- name: Get stack facts
-  os_stack_facts:
-    cloud: "{{ os_container_infra_cloud }}"
-    stack_id: "{{ container_infra.stack_id }}"
-    nested_depth: 4
-    filters:
-      resource_type: 'OS::Nova::Server'
+- block:
+  - name: Get stack facts
+    os_stack_facts:
+      cloud: "{{ os_container_infra_cloud }}"
+      stack_id: "{{ container_infra.stack_id }}"
+      nested_depth: 4
+      filters:
+        resource_type: 'OS::Nova::Server'
 
-- name: Attach interfaces to servers
-  os_server_interface:
-    cloud: "{{ os_container_infra_cloud }}"
-    server_id: "{{ item['physical_resource_id'] }}"
-    interfaces: "{{ os_container_infra_interfaces }}"
-    state: present
-  register: server_interface_facts
-  with_items:
-  - "{{ stack_facts }}"
+  - name: Attach interfaces to servers
+    os_server_interface:
+      cloud: "{{ os_container_infra_cloud }}"
+      server_id: "{{ item['physical_resource_id'] }}"
+      interfaces: "{{ os_container_infra_interfaces }}"
+      state: present
+    register: server_interface_facts
+    with_items: "{{ stack_facts }}"
 
-- name: Generate cluster inventory
-  template:
-    src: container_infra_inventory.j2
-    dest: ./container_infra_inventory
+  - name: Ensure container infra inventory directory exists
+    file:
+      path: "{{ os_container_infra_inventory | dirname }}"
+      state: directory
+    when: os_container_infra_inventory is defined
+
+  - name: Generate cluster inventory
+    template:
+      src: inventory-container-infra.j2
+      dest: "{{ os_container_infra_inventory }}"
+  when: os_container_infra_state == 'present'
 ...

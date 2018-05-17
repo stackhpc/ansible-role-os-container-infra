@@ -109,6 +109,8 @@ if __name__ == '__main__':
 
     display = Display()
 
-    stack_facts = StackFacts(**module.params)
-
+    try:
+        stack_facts = StackFacts(**module.params)
+    except Exception as e:
+        module.fail_json(repr(e))
     module.exit_json(changed=False,ansible_facts=dict(stack_facts=stack_facts.get()))
