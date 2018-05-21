@@ -1,6 +1,6 @@
 ---
 os_container_infra_cloud:
-os_container_infra_ssh_user:
+os_container_infra_user:
 os_container_infra_state: present
 os_container_infra_cluster_name:
 os_container_infra_cluster_template_name:

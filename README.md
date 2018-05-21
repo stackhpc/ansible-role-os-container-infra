@@ -17,7 +17,7 @@ Role Variables
 --------------
 
 `os_container_infra_cloud` is the name of the cloud inside cloud.yaml.
-`os_container_infra_ssh_user` is the name of the cloud inside cloud.yaml.
+`os_container_infra_user` is the name of the SSH user, e.g. fedora.
 `os_container_infra_state` must be either present or absent.
 `os_container_infra_cluster_name` is the name of the cluster.
 `os_container_infra_cluster_template_name` is the cluster template to use for the cluster.
@@ -58,7 +58,7 @@ the cluster and creates an inventory file.
         ...
     - role: stackhpc.os-container-infra
       os_container_infra_cloud: mycloud
-      os_container_infra_ssh_user: fedora
+      os_container_infra_user: fedora
       os_container_infra_state: present
       os_container_infra_cluster_name: test-cluster
       os_container_infra_cluster_template_name: swarm-fedora-atomic-27

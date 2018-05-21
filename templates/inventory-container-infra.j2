@@ -4,13 +4,13 @@ localhost   ansible_connection='local'    ansible_python_interpreter='/usr/bin/e
 [master]
 {% for fact in server_interface_facts.results %}
 {% if fact.item.resource_name is search("-master$") %}
-{{ fact.server_name }}  ansible_ssh_host={{ fact.server_networks[os_container_infra_external_interface][-1] }} ansible_ssh_user={{ os_container_infra_ssh_user }}
+{{ fact.server_name }}  ansible_host={{ fact.server_networks[os_container_infra_external_interface][-1] }} ansible_user={{ os_container_infra_user }}
 {% endif %}
 {% endfor %}
 
 [node]
 {% for fact in server_interface_facts.results %}
 {% if fact.item.resource_name is search("-node$") %}
-{{ fact.server_name }}  ansible_ssh_host={{ fact.server_networks[os_container_infra_external_interface][-1] }} ansible_ssh_user={{ os_container_infra_ssh_user }}
+{{ fact.server_name }}  ansible_host={{ fact.server_networks[os_container_infra_external_interface][-1] }} ansible_user={{ os_container_infra_user }}
 {% endif %}
 {% endfor %}
