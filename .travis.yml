@@ -22,7 +22,7 @@ install:
   - printf '[defaults]\nroles_path=../' >ansible.cfg
 
   # Compensate for repo name being different to the role
-  - ln -s stackhpc.os-container-infra/ ../stackhpc.os-container-infra
+  - ln -s $(pwd) ../stackhpc.os-container-infra
 
 script:
   # Basic role syntax check
