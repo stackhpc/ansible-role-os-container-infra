@@ -10,10 +10,10 @@ addons:
   apt:
     packages:
     - python-pip
-
+    
 install:
   # Install ansible
-  - pip install ansible os-cloud-config
+  - pip install ansible openstacksdk python-magnumclient python-heatclient python-novaclient
 
   # Check ansible version
   - ansible --version
