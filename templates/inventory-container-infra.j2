@@ -10,5 +10,5 @@ localhost   ansible_connection='local'    ansible_python_interpreter='/usr/bin/e
 {% endfor %}
 
 {% endfor %}
-[os_container_infra_cluster_name:children]
+[cluster:children]
 {{ os_container_infra_group_names | join('\n') }}
