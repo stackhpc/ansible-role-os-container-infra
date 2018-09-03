@@ -1,4 +1,5 @@
 galaxy_info:
+  role_name: os-container-infra
   author: StackHPC Ltd
   description: Provision Kubernetes or Docker Swarm cluster using Magnum
   company: StackHPC Ltd
