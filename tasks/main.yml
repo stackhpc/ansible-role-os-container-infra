@@ -1,7 +1,9 @@
 ---
 - name: Get container infra details
   os_container_infra:
-    cloud: "{{ os_container_infra_cloud }}"
+    auth_type: "{{ os_container_infra_auth_type or omit }}"
+    auth: "{{ os_container_infra_auth or omit }}"
+    cloud: "{{ os_container_infra_cloud or omit }}"
     state: "{{ os_container_infra_state }}"
     cluster_name: "{{ os_container_infra_cluster_name }}"
     cluster_template_name: "{{ os_container_infra_cluster_template_name }}"
@@ -12,7 +14,9 @@
 - block:
   - name: Get stack facts
     os_stack_facts:
-      cloud: "{{ os_container_infra_cloud }}"
+      auth_type: "{{ os_container_infra_auth_type or omit }}"
+      auth: "{{ os_container_infra_auth or omit }}"
+      cloud: "{{ os_container_infra_cloud or omit }}"
       stack_id: "{{ container_infra.stack_id }}"
       nested_depth: 4
       filters:
@@ -20,7 +24,9 @@
 
   - name: Attach interfaces to servers
     os_server_interface:
-      cloud: "{{ os_container_infra_cloud }}"
+      auth_type: "{{ os_container_infra_auth_type or omit }}"
+      auth: "{{ os_container_infra_auth or omit }}"
+      cloud: "{{ os_container_infra_cloud or omit }}"
       server_id: "{{ item['physical_resource_id'] }}"
       interfaces: "{{ os_container_infra_interfaces }}"
       state: present

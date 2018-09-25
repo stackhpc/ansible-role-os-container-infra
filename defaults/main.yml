@@ -1,4 +1,7 @@
 ---
+# Valid settings: password
+os_container_infra_auth_type:
+os_container_infra_auth:
 os_container_infra_cloud:
 os_container_infra_user:
 os_container_infra_state: present

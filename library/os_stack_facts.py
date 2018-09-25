@@ -69,16 +69,26 @@ import time
 
 display = Display()
 
+class OpenStackAuthConfig(Exception):
+    pass
+
 class StackFacts(object):
     def __init__(self, **kwargs):
         self.stack_id = kwargs['stack_id']
         self.nested_depth = kwargs['nested_depth']
         self.filters = kwargs['filters']
-        self.connect(kwargs['cloud'])
+        self.connect(**kwargs)
 
-    def connect(self, cloud):
-        self.cloud = openstack.connect(cloud=cloud)
-        self.cloud.authorize()
+    def connect(self, **kwargs):
+        if kwargs['auth_type'] == 'environment':
+            self.cloud = openstack.connect()
+        elif kwargs['auth_type'] == 'cloud':
+            self.cloud = openstack.connect(cloud=kwargs['cloud'])
+        elif kwargs['auth_type'] == 'password':
+            self.cloud = openstack.connect(**kwargs['auth'])
+        else:
+            raise OpenStackAuthConfig
+
         self.client = Client('1', session=self.cloud.session)
 
     def get(self):
@@ -99,7 +109,9 @@ class StackFacts(object):
 if __name__ == '__main__':
     module = AnsibleModule(
         argument_spec = dict(
-            cloud=dict(required=True, type='str'),
+            cloud=dict(required=False, type='str'),
+            auth=dict(required=False, type='dict'),
+            auth_type=dict(default='environment', required=False, type='str'),
             stack_id=dict(required=True, type='str'),
             nested_depth=dict(default=1, type='int'),
             filters=dict(default=dict(), type='dict'),
