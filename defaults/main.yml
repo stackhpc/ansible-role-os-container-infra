@@ -13,5 +13,5 @@ os_container_infra_node_count: 1
 os_container_infra_external_interface:
 os_container_infra_interfaces: []
 os_container_infra_inventory: "{{ playbook_dir }}/inventory-{{ os_container_infra_cluster_name }}"
-os_container_infra_group_names: ['master','node']
+os_container_infra_group_names: ['master','node','minion']
 ...
