@@ -42,6 +42,11 @@ be accessed externally.
 attach to the servers in a cluster since Magnum only allows attachment of one
 network interface by default.
 
+`os_container_infra_environment_group` is an optional Ansible group name to
+which all cluster hosts and localhost will be added. This can be useful if
+there is a single group that represents an environment such as
+development/staging/production.
+
 Example Playbook
 ----------------
 

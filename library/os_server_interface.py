@@ -75,7 +75,12 @@ class ServerInterface(object):
         self.state = kwargs['state']
     
         self.connect(**kwargs)
-        self.interfaces = [self.cloud.network.find_network(interface) for interface in kwargs['interfaces']]
+        self.interfaces = []
+        for interface in kwargs['interfaces']:
+            network = self.cloud.network.find_network(interface)
+            if not network:
+                raise Exception("Unable to find network '%s'" % interface)
+            self.interfaces.append(network)
 
     def connect(self, **kwargs):
         if kwargs['auth_type'] == 'environment':
@@ -134,9 +139,8 @@ if __name__ == '__main__':
 
     display = Display()
 
-    server_interface = ServerInterface(**module.params)
-
     try:
+        server_interface = ServerInterface(**module.params)
         changed = server_interface.apply()
     except Exception as e:
         module.fail_json(msg=repr(e))
