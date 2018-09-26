@@ -1,5 +1,5 @@
 ---
-- name: Get container infra details
+- name: "Ensure container cluster is {{ os_container_infra_state }}"
   os_container_infra:
     cloud: "{{ os_container_infra_cloud }}"
     state: "{{ os_container_infra_state }}"
