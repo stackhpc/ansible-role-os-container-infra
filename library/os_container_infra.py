@@ -105,8 +105,8 @@ class ContainerInfra(object):
         self.client = Client('1', endpoint_override=False, session=self.cloud.session)
 
     def apply(self):
-        tries = 0
-        fail_after = 100
+        timeout = 3600
+        start = time.time()
         changed = False
         while True:
             try:
@@ -135,13 +135,13 @@ class ContainerInfra(object):
                     raise OpenStackError(self.result['faults'])
             except WaitCondition as e:
                 # This is taking far too long, terminate.
-                if fail_after < tries:
-                    raise OpenStackError("Failing after {} tries.".format(fail_after))
+                now = time.time()
+                if now > start + timeout:
+                    raise OpenStackError("Timed out waiting for creation after {} seconds.".format(timeout))
                 # Wait before trying again.
                 else:
-                    display.debug('[DEBUG] Tries: [{}/{}] {}'.format(tries, fail_after, e))
+                    display.debug('[DEBUG] Waited {}/{} seconds {}'.format(now - start, timeout, e))
                     time.sleep(10)
-                    tries += 1
                     changed = True
 
     def create(self):
