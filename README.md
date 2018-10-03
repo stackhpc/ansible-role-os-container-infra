@@ -51,7 +51,52 @@ Example Playbook
 ----------------
 
 The following playbook creates a cluster, attaches two interfaces to servers in
-the cluster and creates an inventory file.
+the cluster and creates an inventory file using authentication information
+available in the environment variables (which is the default behaviour):
+
+    ---
+    - hosts: localhost
+      become: False
+      gather_facts: False
+      roles:
+      - role: stackhpc.os-container-infra
+        os_container_infra_auth_type: environment # default behaviour
+        # container specific variables
+        os_container_infra_user: fedora
+        os_container_infra_state: present
+        os_container_infra_cluster_name: test-cluster
+        os_container_infra_cluster_template_name: swarm-fedora-atomic-27
+        os_container_infra_keypair: default
+        os_container_infra_master_count: 1
+        os_container_infra_node_count: 1
+        os_container_infra_external_interface: p3-internal
+        os_container_infra_interfaces:
+        - p3-lln
+        - p3-bdn
+    ...
+
+To authenticate using information passed via playbook:
+
+    ---
+    - hosts: localhost
+      become: False
+      gather_facts: False
+      roles:
+      - role: stackhpc.os-container-infra
+        os_container_infra_auth_type: password
+        os_container_infra_auth:
+          auth_url: http://10.60.253.1:5000
+          project_name: p3
+          username: username
+          password: password
+          user_domain_name: Default
+          project_domain_name: Default
+          region_name: RegionOne
+        # ...container specific variables
+    ...
+
+To authenticate using the information stored in `.config/openstack/clouds.yaml`
+which can be generated using our `stackhpc.os-config` role:
 
     ---
     - hosts: localhost
@@ -70,22 +115,12 @@ the cluster and creates an inventory file.
                 password: password
                 user_domain_name: Default
                 project_domain_name: Default
-              auth_type: password
               region: RegionOne
           ...
       - role: stackhpc.os-container-infra
+        os_container_infra_auth_type: cloud
         os_container_infra_cloud: mycloud
-        os_container_infra_user: fedora
-        os_container_infra_state: present
-        os_container_infra_cluster_name: test-cluster
-        os_container_infra_cluster_template_name: swarm-fedora-atomic-27
-        os_container_infra_keypair: default
-        os_container_infra_master_count: 1
-        os_container_infra_node_count: 1
-        os_container_infra_external_interface: p3-internal
-        os_container_infra_interfaces:
-        - p3-lln
-        - p3-bdn
+        # ...container specific variables
     ...
 
 Ansible Debug Info

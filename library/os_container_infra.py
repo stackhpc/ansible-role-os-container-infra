@@ -86,6 +86,9 @@ class WaitCondition(Exception):
 class OpenStackError(Exception):
     pass
 
+class OpenStackAuthConfig(Exception):
+    pass
+
 class ContainerInfra(object):
     def __init__(self, **kwargs):
         self.name = kwargs['cluster_name']
@@ -94,13 +97,21 @@ class ContainerInfra(object):
         self.keypair = kwargs['keypair']
         self.state = kwargs['state'].lower()
 
-        self.connect(kwargs['cloud'])
+        self.connect(**kwargs)
         self.cluster_template_id = self.client.cluster_templates.get(kwargs['cluster_template_name']).uuid
         
         self.result = dict()
 
-    def connect(self, cloud):
-        self.cloud = openstack.connect(cloud=cloud)
+    def connect(self, **kwargs):
+        if kwargs['auth_type'] == 'environment':
+            self.cloud = openstack.connect()
+        elif kwargs['auth_type'] == 'cloud':
+            self.cloud = openstack.connect(cloud=kwargs['cloud'])
+        elif kwargs['auth_type'] == 'password':
+            self.cloud = openstack.connect(**kwargs['auth'])
+        else:
+            raise OpenStackAuthConfig('Provided auth_type must be one of [environment, cloud, password].')
+
         self.cloud.authorize()
         self.client = Client('1', endpoint_override=False, session=self.cloud.session)
 
@@ -190,7 +201,9 @@ class ContainerInfra(object):
 if __name__ == '__main__':
     module = AnsibleModule(
         argument_spec = dict(
-            cloud=dict(required=True, type='str'),
+            cloud=dict(required=False, type='str'),
+            auth=dict(required=False, type='dict'),
+            auth_type=dict(default='environment', required=False, type='str'),
             state=dict(default='present', choices=['present','absent']),
             cluster_name=dict(required=True, type='str'),
             cluster_template_name=dict(required=True, type='str'),
