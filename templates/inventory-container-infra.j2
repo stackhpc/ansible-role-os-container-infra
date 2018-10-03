@@ -1,6 +1,12 @@
 [openstack]
 localhost   ansible_connection='local'    ansible_python_interpreter='/usr/bin/env python'
 
+{% if os_container_infra_environment_group is not none %}
+[{{ os_container_infra_environment_group }}:children]
+openstack
+cluster
+{% endif %}
+
 {% for group in os_container_infra_group_names %}
 [{{ group }}]
 {% for fact in server_interface_facts.results %}
