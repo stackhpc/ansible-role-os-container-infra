@@ -85,7 +85,7 @@ class ServerInterface(object):
         elif kwargs['auth_type'] == 'password':
             self.cloud = openstack.connect(**kwargs['auth'])
         else:
-            raise OpenStackAuthConfig
+            raise OpenStackAuthConfig('Provided auth_type must be one of [environment, cloud, password].')
 
         self.cloud.authorize()
         self.client = Client('2', session=self.cloud.session)

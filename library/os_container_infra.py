@@ -110,7 +110,7 @@ class ContainerInfra(object):
         elif kwargs['auth_type'] == 'password':
             self.cloud = openstack.connect(**kwargs['auth'])
         else:
-            raise OpenStackAuthConfig
+            raise OpenStackAuthConfig('Provided auth_type must be one of [environment, cloud, password].')
 
         self.cloud.authorize()
         self.client = Client('1', endpoint_override=False, session=self.cloud.session)
@@ -133,8 +133,7 @@ class ContainerInfra(object):
                 status = self.result['status']
                 # If the cluster is in a failed status, raise error:
                 if status.endswith('FAILED'):
-                    raise OpenStackError(status)
-                    #raise OpenStackError(self.result['faults'])
+                    raise OpenStackError(self.result['faults'])
                 # If the cluster creation and update is in progress:
                 elif status.endswith('PROGRESS'):
                     raise WaitCondition(status)

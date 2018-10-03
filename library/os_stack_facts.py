@@ -87,7 +87,7 @@ class StackFacts(object):
         elif kwargs['auth_type'] == 'password':
             self.cloud = openstack.connect(**kwargs['auth'])
         else:
-            raise OpenStackAuthConfig
+            raise OpenStackAuthConfig('Provided auth_type must be one of [environment, cloud, password].')
 
         self.client = Client('1', session=self.cloud.session)
 
