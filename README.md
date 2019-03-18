@@ -136,6 +136,17 @@ To filter these warnings:
 
     tail -f ansible.log | grep DEBUG
 
+Known Issues
+------------
+
+The `template` Ansible modules writes an inventory file and it may complain
+about missing `libselinux-python` which is already installed is most Linux
+distros. If thats the case, simply create a symlink to the selinux directory in
+your virtual environment:
+
+    ln -s /usr/lib64/python2.7/site-packages/selinux/ venv/lib64/python2.7/site-packages/
+
+
 License
 -------
 

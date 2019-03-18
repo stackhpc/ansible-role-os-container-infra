@@ -1,0 +1,63 @@
+---
+- name: "Ensure container cluster is {{ os_container_infra_state }}"
+  os_container_infra:
+    auth_type: "{{ os_container_infra_auth_type or omit }}"
+    auth: "{{ os_container_infra_auth or omit }}"
+    cloud: "{{ os_container_infra_cloud or omit }}"
+    state: "{{ os_container_infra_state }}"
+    cluster_name: "{{ os_container_infra_cluster_name }}"
+    cluster_template_name: "{{ os_container_infra_cluster_template_name }}"
+    master_count: "{{ os_container_infra_master_count }}"
+    node_count: "{{ os_container_infra_node_count }}"
+    keypair: "{{ os_container_infra_keypair }}"
+
+- block:
+
+    - name: Get stack facts
+      os_stack_facts:
+        auth_type: "{{ os_container_infra_auth_type or omit }}"
+        auth: "{{ os_container_infra_auth or omit }}"
+        cloud: "{{ os_container_infra_cloud or omit }}"
+        stack_id: "{{ container_infra.stack_id }}"
+        nested_depth: 4
+        filters:
+          resource_type: 'OS::Nova::Server'
+
+    - name: Attach interfaces to servers
+      os_server_interface:
+        auth_type: "{{ os_container_infra_auth_type or omit }}"
+        auth: "{{ os_container_infra_auth or omit }}"
+        cloud: "{{ os_container_infra_cloud or omit }}"
+        server_id: "{{ item['physical_resource_id'] }}"
+        interfaces: "{{ os_container_infra_interfaces }}"
+        state: present
+      register: server_interface_facts
+      with_items: "{{ stack_facts }}"
+
+    - name: Ensure container infra inventory directory exists
+      file:
+        path: "{{ os_container_infra_inventory | dirname }}"
+        state: directory
+      when: os_container_infra_inventory is defined
+
+    - name: Generate cluster inventory
+      template:
+        src: inventory-container-infra.j2
+        dest: "{{ os_container_infra_inventory }}"
+
+    - name: Add hosts to a dynamic inventory
+      add_host:
+        name: "{{ item.server_name }}"
+        groups:
+          - cluster
+          - "{{ os_container_infra_master_group if item.item.resource_name is search('-' + os_container_infra_master_group + '$') else omit }}"
+          - "{{ os_container_infra_worker_group if item.item.resource_name is search('-' + os_container_infra_worker_group + '$') else omit }}"
+        ansible_host: "{{ item.server_networks[os_container_infra_default_interface] | last }}"
+        ansible_user: "{{ os_container_infra_user }}"
+        ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+        server_networks: "{{ item.server_networks }}"
+      with_items: "{{ server_interface_facts.results }}"
+      changed_when: false
+
+  when: os_container_infra_state in ['present', 'query']
+...

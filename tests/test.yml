@@ -1,5 +1,24 @@
 ---
-- hosts: openstack
-  connection: local
+- hosts: localhost
+  become: False
+  gather_facts: False
   roles:
-    - stackhpc.os-container-infra
+  - role: stackhpc.os-container-infra
+    os_container_infra_user: fedora
+    os_container_infra_state: present
+    os_container_infra_cluster_name: k8s
+    os_container_infra_cluster_template_name: k8s-fa29
+    os_container_infra_keypair: bharat
+    os_container_infra_master_count: 1
+    os_container_infra_node_count: 5
+    os_container_infra_default_interface: default
+
+- hosts: cluster
+  gather_facts: False
+  become: yes
+  roles:
+  - role: stackhpc.os-container-infra
+    os_container_infra_state: upgrade
+    os_container_infra_k8s_version: v1.13.4
+    os_container_infra_coe: kubernetes
+...

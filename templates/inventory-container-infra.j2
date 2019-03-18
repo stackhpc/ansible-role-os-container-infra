@@ -1,20 +1,20 @@
 [openstack]
-localhost   ansible_connection='local'    ansible_python_interpreter='/usr/bin/env python'
+localhost ansible_connection='local' ansible_python_interpreter='/usr/bin/env python'
 
 {% if os_container_infra_environment_group is not none %}
 [{{ os_container_infra_environment_group }}:children]
-openstack
 cluster
 {% endif %}
 
-{% for group in os_container_infra_group_names %}
+{% for group in [os_container_infra_master_group, os_container_infra_worker_group] %}
 [{{ group }}]
 {% for fact in server_interface_facts.results %}
 {% if fact.item.resource_name is search("-" + group + "$") %}
-{{ fact.server_name }}  ansible_host={{ fact.server_networks[os_container_infra_external_interface][-1] }}  ansible_user={{ os_container_infra_user }}  server_networks='{{ fact.server_networks | to_json }}'
+{{ fact.server_name }} ansible_host={{ fact.server_networks[os_container_infra_default_interface] | last }} ansible_user={{ os_container_infra_user }} server_networks='{{ fact.server_networks | to_json }}'
 {% endif %}
 {% endfor %}
 
 {% endfor %}
 [cluster:children]
-{{ os_container_infra_group_names | join('\n') }}
+{{ os_container_infra_master_group }}
+{{ os_container_infra_worker_group }}

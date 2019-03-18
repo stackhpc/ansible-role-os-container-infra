@@ -1,0 +1,23 @@
+---
+- name: pull images
+  atomic_image:
+    name: "docker.io/openstackmagnum/{{ k8s_service.name }}:{{ k8s_service.version | default(k8s_version) }}"
+    state: latest
+    backend: ostree
+    started: yes
+  when: k8s_service.group in group_names
+- name: apply images
+  atomic_container:
+    name: "{{ k8s_service.service }}"
+    backend: ostree
+    state: latest
+    mode: system
+    image: "docker.io/openstackmagnum/{{ k8s_service.name }}:{{ k8s_service.version | default(k8s_version) }}"
+  when: k8s_service.group in group_names
+- name: start service
+  service:
+    name: "{{ k8s_service.service }}"
+    state: started
+    enabled: yes
+  when: k8s_service.group in group_names
+...

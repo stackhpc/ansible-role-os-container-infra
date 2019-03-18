@@ -1,47 +1,18 @@
 ---
-- name: "Ensure container cluster is {{ os_container_infra_state }}"
-  os_container_infra:
-    auth_type: "{{ os_container_infra_auth_type or omit }}"
-    auth: "{{ os_container_infra_auth or omit }}"
-    cloud: "{{ os_container_infra_cloud or omit }}"
-    state: "{{ os_container_infra_state }}"
-    cluster_name: "{{ os_container_infra_cluster_name }}"
-    cluster_template_name: "{{ os_container_infra_cluster_template_name }}"
-    master_count: "{{ os_container_infra_master_count }}"
-    node_count: "{{ os_container_infra_node_count }}"
-    keypair: "{{ os_container_infra_keypair }}"
+- name: os_container_infra_state != 'upgrade'
+  include_tasks: not-upgrade.yml
+  when:
+    - os_container_infra_state != 'upgrade'
 
-- block:
-  - name: Get stack facts
-    os_stack_facts:
-      auth_type: "{{ os_container_infra_auth_type or omit }}"
-      auth: "{{ os_container_infra_auth or omit }}"
-      cloud: "{{ os_container_infra_cloud or omit }}"
-      stack_id: "{{ container_infra.stack_id }}"
-      nested_depth: 4
-      filters:
-        resource_type: 'OS::Nova::Server'
-
-  - name: Attach interfaces to servers
-    os_server_interface:
-      auth_type: "{{ os_container_infra_auth_type or omit }}"
-      auth: "{{ os_container_infra_auth or omit }}"
-      cloud: "{{ os_container_infra_cloud or omit }}"
-      server_id: "{{ item['physical_resource_id'] }}"
-      interfaces: "{{ os_container_infra_interfaces }}"
-      state: present
-    register: server_interface_facts
-    with_items: "{{ stack_facts }}"
-
-  - name: Ensure container infra inventory directory exists
-    file:
-      path: "{{ os_container_infra_inventory | dirname }}"
-      state: directory
-    when: os_container_infra_inventory is defined
-
-  - name: Generate cluster inventory
-    template:
-      src: inventory-container-infra.j2
-      dest: "{{ os_container_infra_inventory }}"
-  when: os_container_infra_state == 'present'
+- name: os_container_infra_state == 'upgrade'
+  vars:
+    k8s_version: "{{ os_container_infra_k8s_version }}"
+  include_tasks: upgrade.yml
+  when:
+    - os_container_infra_state == 'upgrade'
+    - os_container_infra_coe == 'kubernetes'
+    - os_container_infra_k8s_version is defined
+  loop: "{{ os_container_infra_k8s_services }}"
+  loop_control:
+    loop_var: k8s_service
 ...
