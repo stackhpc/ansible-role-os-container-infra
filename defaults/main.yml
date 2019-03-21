@@ -4,23 +4,36 @@ os_container_infra_auth_type:
 os_container_infra_auth:
 os_container_infra_cloud:
 os_container_infra_user:
-os_container_infra_state: present # can be present, absent, query or update
+os_container_infra_state: "present" # can be present, absent, query or upgrade
 os_container_infra_cluster_name:
 os_container_infra_cluster_template_name:
 os_container_infra_keypair:
-os_container_infra_master_count: 1
-os_container_infra_node_count: 1
-os_container_infra_strict_host_key_checking: false
+os_container_infra_roles: []
+os_container_infra_host_key_checking: false
 os_container_infra_external_interface:
 os_container_infra_default_interface: "{{ os_container_infra_external_interface }}" # for backward compatibility
 os_container_infra_interfaces: []
 os_container_infra_inventory: "{{ playbook_dir }}/inventory-{{ os_container_infra_cluster_name }}"
 os_container_infra_environment_group:
-os_container_infra_k8s_version: v1.13.4
-os_container_infra_coe: kubernetes
-os_container_infra_cluster_group: cluster
-os_container_infra_master_group: master
-os_container_infra_worker_group: "{{ 'minion' if os_container_infra_coe == 'kubernetes' else 'node' }}"
+os_container_infra_master_group:
+- name: "master"
+  count: "{{ os_container_infra_master_count | int }}"
+os_container_infra_worker_group:
+- name: "{{ 'minion' if os_container_infra_coe == 'kubernetes' else 'node' }}"
+  count: "{{ os_container_infra_node_count | int }}"
+os_container_infra_groups:
+- "{{ os_container_infra_master_group }}"
+- "{{ os_container_infra_worker_group }}"
+
+# For backward compatibility
+os_container_infra_master_count: 1
+os_container_infra_node_count: 1
+
+# Type of cluster
+os_container_infra_coe: "kubernetes" # can also be swarm-mode
+
+# Kubernetes related
+os_container_infra_k8s_version: "v1.13.4"
 os_container_infra_k8s_master_kubelet: false
 os_container_infra_k8s_services:
   - name: kubernetes-controller-manager
@@ -37,5 +50,5 @@ os_container_infra_k8s_services:
     group: "{{ os_container_infra_master_group }}"
   - name: kubernetes-kubelet
     service: kubelet
-    group: "{{ os_container_infra_k8s_master_kubelet | ternary(os_container_infra_cluster_group, os_container_infra_worker_group) }}"
+    group: "{{ os_container_infra_k8s_master_kubelet | ternary('cluster', os_container_infra_worker_group) }}"
 ...

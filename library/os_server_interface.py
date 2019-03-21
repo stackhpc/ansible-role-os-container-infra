@@ -32,7 +32,7 @@ options:
      type: str
    state:
      description:
-       - Must be `present` or `absent`.
+       - Must be `present`, `query` or `absent`.
      type: str
    server_id:
      description:
@@ -104,24 +104,23 @@ class ServerInterface(object):
 
     def apply(self):
         changed = False
-        server = self.get_server()
-        attached_interfaces = server.interface_list()
-        for interface in self.interfaces:
-            interface_exists = False
-            for attached_interface in attached_interfaces:
-                if interface.id == attached_interface.net_id:
-                    if self.state == 'absent':
-                        server.interface_detach(port_id=attached_interface.port_id)
-                        changed = True
-                    elif self.state == 'present':
-                        interface_exists = True
-            if interface_exists == False and self.state == 'present':
-                server.interface_attach(port_id=None, net_id=interface.id, fixed_ip=None)
-                changed = True
-        if changed:
-            self.server = self.get_server()
-        else:
-            self.server = server
+        self.server = server = self.get_server()
+        if self.state != 'query':
+            attached_interfaces = server.interface_list()
+            for interface in self.interfaces:
+                interface_exists = False
+                for attached_interface in attached_interfaces:
+                    if interface.id == attached_interface.net_id:
+                        if self.state == 'absent':
+                            server.interface_detach(port_id=attached_interface.port_id)
+                            changed = True
+                        elif self.state == 'present':
+                            interface_exists = True
+                if interface_exists == False and self.state == 'present':
+                    server.interface_attach(port_id=None, net_id=interface.id, fixed_ip=None)
+                    changed = True
+            if changed:
+                self.server = self.get_server()
         return changed
 
 if __name__ == '__main__':
@@ -130,7 +129,7 @@ if __name__ == '__main__':
             cloud=dict(required=False, type='str'),
             auth=dict(required=False, type='dict'),
             auth_type=dict(default='environment', required=False, type='str'),
-            state=dict(default='present', choices=['present','absent']),
+            state=dict(default='present', choices=['present','absent', 'query']),
             server_id=dict(required=True, type='str'),
             interfaces=dict(default=[], type='list'),
         ),

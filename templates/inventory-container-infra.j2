@@ -6,15 +6,24 @@ localhost ansible_connection='local' ansible_python_interpreter='/usr/bin/env py
 cluster
 {% endif %}
 
-{% for group in [os_container_infra_master_group, os_container_infra_worker_group] %}
-[{{ group }}]
+{% for group in os_container_infra_groups %}
+[{{ group.name }}]
 {% for fact in server_interface_facts.results %}
-{% if fact.item.resource_name is search("-" + group + "$") %}
+{% if fact.item.resource_name is search("-" + group.name + "$") %}
 {{ fact.server_name }} ansible_host={{ fact.server_networks[os_container_infra_default_interface] | last }} ansible_user={{ os_container_infra_user }} server_networks='{{ fact.server_networks | to_json }}'
 {% endif %}
 {% endfor %}
 
 {% endfor %}
 [cluster:children]
-{{ os_container_infra_master_group }}
-{{ os_container_infra_worker_group }}
+{% for group in os_container_infra_groups %}
+{{ group.name }}
+{% endfor %}
+
+{% for role in os_container_infra_roles %}
+cluster_{{ role.name }}:children]
+{% for group in role.groups %}
+{{ group.name }}
+{% endfor %}
+
+{% endfor %}
