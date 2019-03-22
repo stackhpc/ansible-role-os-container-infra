@@ -1,128 +1,126 @@
-#!/usr/bin/env python
-#
-# Copyright (c) 2018 StackHPC Ltd.
-# Apache 2 Licence
+#!/usr/bin/python
+# coding: utf-8 -*-
+
+# Copyright: (c) 2018, Felix Ehrenpfort <felix.ehrenpfort@codecentric.cloud>
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
+
 
 ANSIBLE_METADATA = {'metadata_version': '1.1',
                     'status': ['preview'],
                     'supported_by': 'community'}
 
+
 DOCUMENTATION = '''
 ---
 module: os_stack_facts
-short_description: Retrieve facts about stack resources
-author: bharat@stackhpc.com
-version_added: "1.0"
+short_description: Retrieve facts about a stack within openstack
+version_added: "2.8"
+author: "Felix Ehrenpfort (@xinau)"
 description:
-    - Retrieve facts about stack resources from OpenStack Heat API.
+    - Retrieve facts about a image image from OpenStack.
 notes:
-    - This module creates a new top-level C(stack_facts) fact, which
-      contains a list of stack resources.
+    - Facts are placed in the C(openstack_stack) variable.
 requirements:
-    - "python >= 2.6"
+    - "python >= 2.7"
     - "openstacksdk"
-    - "python-heatclient"
 options:
-   cloud:
-     description:
-       - Cloud name inside cloud.yaml file.
-     type: str
-   stack_id:
-     description:
-        - Heat stack name or uuid.
-     type: str
-   nested_depth:
-     description:
-        - Number of levels to recurse into stack resources.
-     type: int
-     default: 1
-   filters:
-     description:
-        - Filters to apply when returning results. Valid fields are
-          (parent_resource, resource_name, links, logical_resource_id,
-          creation_time, resource_status, updated_time, required_by,
-          resource_status_reason, physical_resource_id, resource_type).
-     type: list of str
+    name:
+      description:
+        - Name of the stack that should be created, name could be char and digit, no space
+      required: true
+    availability_zone:
+      description:
+        - Ignored. Present for backwards compatibility
 extends_documentation_fragment: openstack
 '''
 
 EXAMPLES = '''
-# Gather facts about all resources under <stack_id>:
-- os_stack_facts:
-    cloud: mycloud
-    stack_id: xxxxx-xxxxx-xxxx-xxxx
-    nested_depth: 4
-    filters:
-      resource_type: OS::Nova::Server
-- debug:
-    var: stack_facts
+---
+- name: get stack facts
+  register: stack
+  os_stack:
+    name: "{{ stack_name }}"
+'''
+
+RETURN = '''
+
+openstack_stack:
+    description: has all the openstack facts about the stack
+    returned: always, but can be null
+    type: complex
+    contains:
+        action:
+            description: Action, could be Create or Update.
+            type: string
+            sample: "CREATE"
+        creation_time:
+            description: Time when the action has been made.
+            type: string
+            sample: "2016-07-05T17:38:12Z"
+        description:
+            description: Description of the Stack provided in the heat template.
+            type: string
+            sample: "HOT template to create a new instance and networks"
+        id:
+            description: Stack ID.
+            type: string
+            sample: "97a3f543-8136-4570-920e-fd7605c989d6"
+        name:
+            description: Name of the Stack
+            type: string
+            sample: "test-stack"
+        identifier:
+            description: Identifier of the current Stack action.
+            type: string
+            sample: "test-stack/97a3f543-8136-4570-920e-fd7605c989d6"
+        links:
+            description: Links to the current Stack.
+            type: list of dict
+            sample: "[{'href': 'http://foo:8004/v1/7f6a/stacks/test-stack/97a3f543-8136-4570-920e-fd7605c989d6']"
+        outputs:
+            description: Output returned by the Stack.
+            type: list of dict
+            sample: "{'description': 'IP address of server1 in private network',
+                        'output_key': 'server1_private_ip',
+                        'output_value': '10.1.10.103'}"
+        parameters:
+            description: Parameters of the current Stack
+            type: dict
+            sample: "{'OS::project_id': '7f6a3a3e01164a4eb4eecb2ab7742101',
+                        'OS::stack_id': '97a3f543-8136-4570-920e-fd7605c989d6',
+                        'OS::stack_name': 'test-stack',
+                        'stack_status': 'CREATE_COMPLETE',
+                        'stack_status_reason': 'Stack CREATE completed successfully',
+                        'status': 'COMPLETE',
+                        'template_description': 'HOT template to create a new instance and networks',
+                        'timeout_mins': 60,
+                        'updated_time': null}"
 '''
 
 from ansible.module_utils.basic import AnsibleModule
-from ansible.utils.display import Display
-from heatclient.client import Client
-import openstack
-import time
+from ansible.module_utils.openstack import openstack_full_argument_spec, openstack_module_kwargs, openstack_cloud_from_module
+from ansible.module_utils._text import to_native
 
-display = Display()
 
-class OpenStackAuthConfig(Exception):
-    pass
+def main():
 
-class StackFacts(object):
-    def __init__(self, **kwargs):
-        self.stack_id = kwargs['stack_id']
-        self.nested_depth = kwargs['nested_depth']
-        self.filters = kwargs['filters']
-        self.connect(**kwargs)
+    argument_spec = openstack_full_argument_spec(
+        name=dict(required=True),
+    )
+    module_kwargs = openstack_module_kwargs()
+    module = AnsibleModule(argument_spec, **module_kwargs)
 
-    def connect(self, **kwargs):
-        if kwargs['auth_type'] == 'environment':
-            self.cloud = openstack.connect()
-        elif kwargs['auth_type'] == 'cloud':
-            self.cloud = openstack.connect(cloud=kwargs['cloud'])
-        elif kwargs['auth_type'] == 'password':
-            self.cloud = openstack.connect(**kwargs['auth'])
-        else:
-            raise OpenStackAuthConfig('Provided auth_type must be one of [environment, cloud, password].')
+    sdk, cloud = openstack_cloud_from_module(module)
+    try:
+        stack = cloud.get_stack(module.params['name'])
+        module.exit_json(changed=False, ansible_facts=dict(openstack_stack=stack))
 
-        self.client = Client('1', session=self.cloud.session)
+    except sdk.exceptions.OpenStackCloudException as e:
+        module.fail_json(msg=str(e))
 
-    def get(self):
-        stack_list = self.client.resources.list(
-            stack_id=self.stack_id,
-            nested_depth=self.nested_depth,
-        )
-        result = list()
-        for item in stack_list:
-            item_dict = item.to_dict()
-            condition = True
-            for k,v in self.filters.items():
-                condition = condition and item_dict[k] == v
-            if condition:
-                result.append(item_dict)
-        return result
 
 if __name__ == '__main__':
-    module = AnsibleModule(
-        argument_spec = dict(
-            cloud=dict(required=False, type='str'),
-            auth=dict(required=False, type='dict'),
-            auth_type=dict(default='environment', required=False, type='str'),
-            stack_id=dict(required=True, type='str'),
-            nested_depth=dict(default=1, type='int'),
-            filters=dict(default=dict(), type='dict'),
-        ),
-        supports_check_mode=False
-    )
-
-    display = Display()
-
-    try:
-        stack_facts = StackFacts(**module.params)
-    except Exception as e:
-        module.fail_json(repr(e))
-    module.exit_json(changed=False,ansible_facts=dict(stack_facts=stack_facts.get()))
+    main()
