@@ -1,5 +1,4 @@
 ---
-- debug: var=os_container_infra_environment_group
 - name: "Ensure container cluster is {{ os_container_infra_state }}"
   os_container_infra:
     auth_type: "{{ os_container_infra_auth_type or omit }}"
@@ -15,12 +14,11 @@
 - block:
 
     - name: Get stack facts and load them into stack_facts
-      os_stack_facts:
+      os_stack_resources:
         auth_type: "{{ os_container_infra_auth_type or omit }}"
         auth: "{{ os_container_infra_auth or omit }}"
-        cloud: "{{ os_container_infra_cloud or omit }}"
-        stack_id: "{{ container_infra.stack_id }}"
-        nested_depth: 4
+        name: "{{ container_infra.stack_id }}"
+        max_depth: 2
         filters:
           resource_type: 'OS::Nova::Server'
 
@@ -28,12 +26,11 @@
       os_server_interface:
         auth_type: "{{ os_container_infra_auth_type or omit }}"
         auth: "{{ os_container_infra_auth or omit }}"
-        cloud: "{{ os_container_infra_cloud or omit }}"
         state: "{{ os_container_infra_state }}"
         server_id: "{{ item.get('physical_resource_id') }}"
         interfaces: "{{ os_container_infra_interfaces }}"
-      with_items: "{{ stack_facts }}"
-      register: server_interface_facts
+      with_items: "{{ openstack_stack_resources }}"
+      register: openstack_server_interfaces
 
     - name: Ensure container infra inventory directory exists
       file:
@@ -52,12 +49,12 @@
         groups:
           - "cluster"
           - "{{ os_container_infra_environment_group }}"
-          - "{{ os_container_infra_master_group.name if item.item.resource_name is search('-' + os_container_infra_master_group.name + '$') else omit }}"
-          - "{{ os_container_infra_worker_group.name if item.item.resource_name is search('-' + os_container_infra_worker_group.name + '$') else omit }}"
+          - "{{ os_container_infra_master_group.name if item.item.name is search('-' + os_container_infra_master_group.name + '$') else omit }}"
+          - "{{ os_container_infra_worker_group.name if item.item.name is search('-' + os_container_infra_worker_group.name + '$') else omit }}"
         ansible_host: "{{ item.server_networks.get(os_container_infra_default_interface) | last }}"
         ansible_user: "{{ os_container_infra_user }}"
         server_networks: "{{ item.server_networks }}"
-      with_items: "{{ server_interface_facts.results }}"
+      with_items: "{{ openstack_server_interfaces.results }}"
       changed_when: false
 
     - name: Assign user defined cluster roles to groups

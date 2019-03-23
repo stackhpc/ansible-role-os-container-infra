@@ -8,8 +8,8 @@ cluster
 
 {% for group in os_container_infra_groups %}
 [{{ group.name }}]
-{% for fact in server_interface_facts.results %}
-{% if fact.item.resource_name is search("-" + group.name + "$") %}
+{% for fact in openstack_server_interfaces.results %}
+{% if fact.item.name is search("-" + group.name + "$") %}
 {{ fact.server_name }} ansible_host={{ fact.server_networks[os_container_infra_default_interface] | last }} ansible_user={{ os_container_infra_user }} server_networks='{{ fact.server_networks | to_json }}'
 {% endif %}
 {% endfor %}
