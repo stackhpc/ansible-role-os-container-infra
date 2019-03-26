@@ -30,9 +30,9 @@ install:
 
 script:
   # Basic role syntax check
-  - ansible-playbook tests/test.yml -i tests/inventory --syntax-check
+  - ansible-playbook tests/main.yml -i tests/inventory.ini --syntax-check
   # Ansible lint
-  - ansible-lint tests/test.yml
+  - ansible-lint tests/main.yml
   # YAML lint
   - yamllint -c yamllint.yaml .
 
