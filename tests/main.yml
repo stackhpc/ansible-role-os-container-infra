@@ -8,7 +8,9 @@
     os_container_infra_state: present
     os_container_infra_cluster_name: k8s
     os_container_infra_cluster_template_name: k8s-fa29
-    os_container_infra_roles: []
+    os_container_infra_roles:
+    - name: storage_client
+      groups: ["{{ os_container_infra_worker_group }}"]
     os_container_infra_keypair: bharat
     os_container_infra_default_interface: default
     os_container_infra_master_group:

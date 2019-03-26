@@ -65,19 +65,21 @@ available in the environment variables (which is the default behaviour):
       gather_facts: False
       roles:
       - role: stackhpc.os-container-infra
-        os_container_infra_auth_type: environment # default behaviour
-        # container specific variables
         os_container_infra_user: fedora
         os_container_infra_state: present
-        os_container_infra_cluster_name: test-cluster
-        os_container_infra_cluster_template_name: swarm-fedora-atomic-27
-        os_container_infra_keypair: default
-        os_container_infra_master_count: 1
-        os_container_infra_node_count: 1
-        os_container_infra_default_interface: p3-internal
-        os_container_infra_interfaces:
-        - p3-lln
-        - p3-bdn
+        os_container_infra_cluster_name: k8s
+        os_container_infra_cluster_template_name: k8s-fa29
+        os_container_infra_roles:
+        - name: storage_client
+          groups: ["{{ os_container_infra_worker_group }}"]
+        os_container_infra_keypair: bharat
+        os_container_infra_default_interface: default
+        os_container_infra_master_group:
+          - name: master
+            count: 1
+        os_container_infra_worker_group:
+          - name: minion
+            count: 2
     ...
 
 To authenticate using information passed via playbook, supply a dictionary variable as given:
