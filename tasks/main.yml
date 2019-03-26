@@ -1,8 +1,23 @@
 ---
 - name: os_container_infra_state != 'upgrade'
-  include_tasks: not-upgrade.yml
-  when:
-    - os_container_infra_state != 'upgrade'
+  block:
+
+    - name: "Ensure container cluster is {{ os_container_infra_state }}"
+      os_container_infra:
+        auth_type: "{{ os_container_infra_auth_type or omit }}"
+        auth: "{{ os_container_infra_auth or omit }}"
+        cloud: "{{ os_container_infra_cloud or omit }}"
+        state: "{{ os_container_infra_state }}"
+        cluster_name: "{{ os_container_infra_cluster_name }}"
+        cluster_template_name: "{{ os_container_infra_cluster_template_name }}"
+        master_count: "{{ os_container_infra_master_group.count | int }}"
+        node_count: "{{ os_container_infra_worker_group.count | int }}"
+        keypair: "{{ os_container_infra_keypair }}"
+
+    - import_tasks: present-or-query.yml
+      when: os_container_infra_state in ['present', 'query']
+
+  when: os_container_infra_state != 'upgrade'
 
 - name: os_container_infra_state == 'upgrade'
   vars:

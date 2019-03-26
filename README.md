@@ -16,7 +16,7 @@ Requirements
 Role Variables
 --------------
 
-`os_container_infra_cloud` is the name of the cloud inside cloud.yaml (optional).
+`os_container_infra_cloud` is the name of the cloud ( configured inside cloud.yaml, optional).
 
 `os_container_infra_user` is the name of the SSH user, e.g. fedora.
 
@@ -49,7 +49,7 @@ development/staging/production.
 `os_container_infra_coe` is container orchestration engine to use. Valid
 options are `kubernetes` or `swarm`.
 
-`os_container_infra_k8s_version` is the Kubernetes version to use when
+`os_container_infra_k8s_version` is a configurable Kubernetes version to use when
 `os_container_infra_state = upgrade`.
 
 Example Playbook
@@ -93,8 +93,9 @@ To authenticate using information passed via playbook, supply a dictionary varia
           project_domain_name: Default
           region_name: RegionOne
 
-To authenticate using the information stored in `.config/openstack/clouds.yaml`
-which can be generated using our `stackhpc.os-config` role, append the following:
+To authenticate using the information stored inside
+`.config/openstack/clouds.yaml` or `/etc/openstack/clouds.yaml` which can be
+generated using our `stackhpc.os-config` role, append the following:
 
         os_container_infra_auth_type: cloud
         os_container_infra_cloud: mycloud
@@ -131,9 +132,13 @@ Known Issues
 The `template` Ansible modules writes an inventory file and it may complain
 about missing `libselinux-python` which is already installed is most Linux
 distros. If thats the case, simply create a symlink to the selinux directory in
-your virtual environment:
+your existing virtual environment:
 
     ln -s /usr/lib64/python2.7/site-packages/selinux/ venv/lib64/python2.7/site-packages/
+
+For a new virtual environment:
+
+    virtualenv --system-site-packages venv
 
 License
 -------

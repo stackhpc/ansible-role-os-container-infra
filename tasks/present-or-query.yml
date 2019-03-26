@@ -1,0 +1,54 @@
+---
+- name: Get stack facts and load them into stack_facts
+  os_stack_resources:
+    auth_type: "{{ os_container_infra_auth_type or omit }}"
+    auth: "{{ os_container_infra_auth or omit }}"
+    cloud: "{{ os_container_infra_cloud or omit }}"
+    name: "{{ container_infra.stack_id }}"
+    max_depth: 2
+    filters:
+      resource_type: 'OS::Nova::Server'
+
+- name: Attach interfaces to servers
+  os_server_interface:
+    auth_type: "{{ os_container_infra_auth_type or omit }}"
+    auth: "{{ os_container_infra_auth or omit }}"
+    cloud: "{{ os_container_infra_cloud or omit }}"
+    state: "{{ os_container_infra_state }}"
+    server_id: "{{ item.get('physical_resource_id') }}"
+    interfaces: "{{ os_container_infra_interfaces }}"
+  with_items: "{{ openstack_stack_resources }}"
+  register: openstack_server_interfaces
+
+- name: Ensure container infra inventory directory exists
+  file:
+    path: "{{ os_container_infra_inventory | dirname }}"
+    state: directory
+  when: os_container_infra_inventory is defined
+
+- name: Generate cluster inventory
+  template:
+    src: inventory-container-infra.j2
+    dest: "{{ os_container_infra_inventory }}"
+
+- name: Add hosts to a dynamic inventory
+  add_host:
+    name: "{{ item.server_name }}"
+    groups:
+      - "cluster"
+      - "{{ os_container_infra_environment_group }}"
+      - "{{ os_container_infra_master_group.name if item.item.name is search('-' + os_container_infra_master_group.name + '$') else omit }}"
+      - "{{ os_container_infra_worker_group.name if item.item.name is search('-' + os_container_infra_worker_group.name + '$') else omit }}"
+    ansible_host: "{{ item.server_networks.get(os_container_infra_default_interface) | last }}"
+    ansible_user: "{{ os_container_infra_user }}"
+    server_networks: "{{ item.server_networks }}"
+  with_items: "{{ openstack_server_interfaces.results }}"
+  changed_when: false
+
+- name: Assign user defined cluster roles to groups
+  add_host:
+    name: "{{ item.name }}"
+    groups: "{{ item.groups | map(attribute='name') | list }}"
+  with_items: "{{ os_container_infra_roles }}"
+  changed_when: false
+...
