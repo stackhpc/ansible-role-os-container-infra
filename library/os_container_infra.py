@@ -103,15 +103,15 @@ class ContainerInfra(object):
         self.result = dict()
 
     def connect(self, **kwargs):
-        if kwargs['auth_type'] == 'environment':
-            self.cloud = openstack.connect()
-        elif kwargs['auth_type'] == 'cloud':
-            self.cloud = openstack.connect(cloud=kwargs['cloud'])
-        elif kwargs['auth_type'] == 'password':
-            self.cloud = openstack.connect(**kwargs['auth'])
+        if kwargs['auth_type'] == 'password':
+            if kwargs['cloud']:
+                self.cloud = openstack.connect(cloud=kwargs['cloud'])
+            elif kwargs['auth']:
+                self.cloud = openstack.connect(**kwargs['auth'])
+            else:
+                self.cloud = openstack.connect()
         else:
-            raise OpenStackAuthConfig('Provided auth_type must be one of [environment, cloud, password].')
-
+            raise OpenStackAuthConfig('Only `password` auth_type is supported.')
         self.cloud.authorize()
         self.client = Client('1', endpoint_override=False, session=self.cloud.session)
 
@@ -207,7 +207,7 @@ if __name__ == '__main__':
         argument_spec = dict(
             cloud=dict(required=False, type='str'),
             auth=dict(required=False, type='dict'),
-            auth_type=dict(default='environment', required=False, type='str'),
+            auth_type=dict(default='password', required=False, type='str'),
             state=dict(default='present', choices=['present','absent', 'query']),
             cluster_name=dict(required=True, type='str'),
             cluster_template_name=dict(required=True, type='str'),

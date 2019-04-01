@@ -5,7 +5,7 @@
     state: latest
     backend: ostree
     started: yes
-  when: k8s_service.group in group_names
+  when: k8s_service.group_name in group_names
 - name: "Apply image: {{ k8s_service.name }}"
   atomic_container:
     name: "{{ k8s_service.service }}"
@@ -13,11 +13,11 @@
     state: latest
     mode: system
     image: "docker.io/openstackmagnum/{{ k8s_service.name }}:{{ k8s_service.version | default(k8s_version) }}"
-  when: k8s_service.group in group_names
+  when: k8s_service.group_name in group_names
 - name: "Ensure that the service has started: {{ k8s_service.service }}"
   service:
     name: "{{ k8s_service.service }}"
     state: started
     enabled: yes
-  when: k8s_service.group in group_names
+  when: k8s_service.group_name in group_names
 ...

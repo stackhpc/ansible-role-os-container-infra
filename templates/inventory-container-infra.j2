@@ -3,9 +3,10 @@ localhost ansible_connection='local' ansible_python_interpreter='/usr/bin/env py
 
 {% if os_container_infra_environment_group is not none %}
 [{{ os_container_infra_environment_group }}:children]
+openstack
 cluster
-{% endif %}
 
+{% endif %}
 {% for group in os_container_infra_groups %}
 [{{ group.name }}]
 {% for fact in openstack_server_interfaces.results %}
@@ -21,7 +22,7 @@ cluster
 {% endfor %}
 
 {% for role in os_container_infra_roles %}
-cluster_{{ role.name }}:children]
+[cluster_{{ role.name }}:children]
 {% for group in role.groups %}
 {{ group.name }}
 {% endfor %}

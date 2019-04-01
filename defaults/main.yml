@@ -1,54 +1,67 @@
 ---
-# Valid settings: password
-os_container_infra_auth_type: "environment"
+
+# Type of cluster
+# ---------------
+os_container_infra_state: "present" # can also be absent, query or upgrade
+os_container_infra_coe: "kubernetes" # can also be swarm-mode
+
+# Options required when state is present, query or absent
+# -------------------------------------------------------
+os_container_infra_auth_type:
 os_container_infra_auth:
 os_container_infra_cloud:
 os_container_infra_user:
-os_container_infra_state: "present" # can be present, absent, query or upgrade
+os_container_infra_environment_group:
 os_container_infra_cluster_name:
 os_container_infra_cluster_template_name:
 os_container_infra_keypair:
-os_container_infra_roles: []
-os_container_infra_host_key_checking: false
-os_container_infra_external_interface:
-os_container_infra_default_interface: "{{ os_container_infra_external_interface }}" # for backward compatibility
 os_container_infra_interfaces: []
+os_container_infra_default_interface: "{{ os_container_infra_external_interface }}"
 os_container_infra_inventory: "{{ playbook_dir }}/inventory-{{ os_container_infra_cluster_name }}"
-os_container_infra_environment_group:
+os_container_infra_host_key_checking: false
 os_container_infra_master_group:
-- name: "master"
+  name: "master"
   count: "{{ os_container_infra_master_count | int }}"
 os_container_infra_worker_group:
-- name: "{{ 'minion' if os_container_infra_coe == 'kubernetes' else 'node' }}"
+  name: "{{ 'minion' if os_container_infra_coe == 'kubernetes' else 'node' }}"
   count: "{{ os_container_infra_node_count | int }}"
-os_container_infra_groups:
-- "{{ os_container_infra_master_group }}"
-- "{{ os_container_infra_worker_group }}"
+os_container_infra_roles: [] # expected format:
+#  - name: role_name
+#    groups:
+#      - "{{ os_container_infra_master_group }}"
+#      - "{{ os_container_infra_worker_group }}"
 
-# For backward compatibility
+# Options required when state is upgrade
+# --------------------------------------
+os_container_infra_k8s_version: "v1.14.0"
+os_container_infra_k8s_master_kubelet: false
+
+# For backward compatibility:
+# ---------------------------
 os_container_infra_master_count: 1
 os_container_infra_node_count: 1
+os_container_infra_external_interface:
 
-# Type of cluster
-os_container_infra_coe: "kubernetes" # can also be swarm-mode
-
-# Kubernetes related
-os_container_infra_k8s_version: "v1.13.4"
-os_container_infra_k8s_master_kubelet: false
+# DO NOT CHANGE
+# -------------
+os_container_infra_groups:
+  - "{{ os_container_infra_master_group }}"
+  - "{{ os_container_infra_worker_group }}"
 os_container_infra_k8s_services:
   - name: kubernetes-controller-manager
     service: kube-controller-manager
-    group: "{{ os_container_infra_master_group }}"
+    group_name: "{{ os_container_infra_master_group.name }}"
   - name: kubernetes-proxy
     service: kube-proxy
-    group: "{{ os_container_infra_master_group }}"
+    group_name: "{{ os_container_infra_master_group.name }}"
   - name: kubernetes-apiserver
     service: kube-apiserver
-    group: "{{ os_container_infra_master_group }}"
+    group_name: "{{ os_container_infra_master_group.name }}"
   - name: kubernetes-scheduler
     service: kube-scheduler
-    group: "{{ os_container_infra_master_group }}"
+    group_name: "{{ os_container_infra_master_group.name }}"
   - name: kubernetes-kubelet
     service: kubelet
-    group: "{{ os_container_infra_k8s_master_kubelet | ternary('cluster', os_container_infra_worker_group) }}"
+    group_name: "{{ os_container_infra_k8s_master_kubelet | bool | ternary('cluster', os_container_infra_worker_group.name) }}"
+
 ...

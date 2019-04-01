@@ -1,5 +1,5 @@
 ---
-- name: os_container_infra_state != 'upgrade'
+- name: os_container_infra_state is not 'upgrade'
   block:
 
     - name: "Ensure container cluster is {{ os_container_infra_state }}"

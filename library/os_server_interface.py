@@ -83,15 +83,15 @@ class ServerInterface(object):
             self.interfaces.append(network)
 
     def connect(self, **kwargs):
-        if kwargs['auth_type'] == 'environment':
-            self.cloud = openstack.connect()
-        elif kwargs['auth_type'] == 'cloud':
-            self.cloud = openstack.connect(cloud=kwargs['cloud'])
-        elif kwargs['auth_type'] == 'password':
-            self.cloud = openstack.connect(**kwargs['auth'])
+        if kwargs['auth_type'] == 'password':
+            if kwargs['cloud']:
+                self.cloud = openstack.connect(cloud=kwargs['cloud'])
+            elif kwargs['auth']:
+                self.cloud = openstack.connect(**kwargs['auth'])
+            else:
+                self.cloud = openstack.connect()
         else:
-            raise OpenStackAuthConfig('Provided auth_type must be one of [environment, cloud, password].')
-
+            raise OpenStackAuthConfig('Only `password` auth_type is supported.')
         self.cloud.authorize()
         self.client = Client('2', session=self.cloud.session)
 
@@ -128,7 +128,7 @@ if __name__ == '__main__':
         argument_spec = dict(
             cloud=dict(required=False, type='str'),
             auth=dict(required=False, type='dict'),
-            auth_type=dict(default='environment', required=False, type='str'),
+            auth_type=dict(default='password', required=False, type='str'),
             state=dict(default='present', choices=['present','absent', 'query']),
             server_id=dict(required=True, type='str'),
             interfaces=dict(default=[], type='list'),
