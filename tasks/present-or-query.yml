@@ -1,4 +1,5 @@
 ---
+
 - name: Get stack facts and load them into stack_facts
   os_stack_resources:
     auth_type: "{{ os_container_infra_auth_type or omit }}"
@@ -47,8 +48,9 @@
 
 - name: Assign user defined cluster roles to groups
   add_host:
-    name: "{{ item.name }}"
+    name: "cluster_{{ item.name }}"
     groups: "{{ item.groups | map(attribute='name') | list }}"
   with_items: "{{ os_container_infra_roles }}"
   changed_when: false
+
 ...
