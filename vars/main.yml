@@ -1,0 +1,26 @@
+---
+
+# DO NOT CHANGE
+# -------------
+
+os_container_infra_groups:
+  - "{{ os_container_infra_master_group }}"
+  - "{{ os_container_infra_worker_group }}"
+os_container_infra_k8s_services:
+  - name: kubernetes-controller-manager
+    service: kube-controller-manager
+    group_name: "{{ os_container_infra_master_group.name }}"
+  - name: kubernetes-proxy
+    service: kube-proxy
+    group_name: "{{ os_container_infra_master_group.name }}"
+  - name: kubernetes-apiserver
+    service: kube-apiserver
+    group_name: "{{ os_container_infra_master_group.name }}"
+  - name: kubernetes-scheduler
+    service: kube-scheduler
+    group_name: "{{ os_container_infra_master_group.name }}"
+  - name: kubernetes-kubelet
+    service: kubelet
+    group_name: "{{ os_container_infra_k8s_master_kubelet | bool | ternary('cluster', os_container_infra_worker_group.name) }}"
+
+...
