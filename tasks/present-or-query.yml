@@ -1,4 +1,5 @@
 ---
+
 - name: Get stack facts and load them into stack_facts
   os_stack_resources:
     auth_type: "{{ os_container_infra_auth_type or omit }}"
@@ -30,4 +31,26 @@
   template:
     src: inventory-container-infra.j2
     dest: "{{ os_container_infra_inventory }}"
+
+- name: Add hosts to a dynamic inventory
+  add_host:
+    name: "{{ item.server_name }}"
+    groups:
+      - "cluster"
+      - "{{ os_container_infra_environment_group }}"
+      - "{{ os_container_infra_master_group.name if item.item.name is search('-' + os_container_infra_master_group.name + '$') else omit }}"
+      - "{{ os_container_infra_worker_group.name if item.item.name is search('-' + os_container_infra_worker_group.name + '$') else omit }}"
+    ansible_host: "{{ item.server_networks.get(os_container_infra_default_interface) | last }}"
+    ansible_user: "{{ os_container_infra_user }}"
+    server_networks: "{{ item.server_networks }}"
+  with_items: "{{ openstack_server_interfaces.results }}"
+  changed_when: false
+
+- name: Assign user defined cluster roles to groups
+  add_host:
+    name: "cluster_{{ item.name }}"
+    groups: "{{ item.groups | map(attribute='name') | list }}"
+  with_items: "{{ os_container_infra_roles }}"
+  changed_when: false
+
 ...
