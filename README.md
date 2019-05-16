@@ -16,11 +16,11 @@ Requirements
 Role Variables
 --------------
 
-`os_container_infra_cloud` is the name of the cloud inside cloud.yaml.
+`os_container_infra_cloud` is the name of the cloud ( configured inside cloud.yaml, optional).
 
 `os_container_infra_user` is the name of the SSH user, e.g. fedora.
 
-`os_container_infra_state` must be either present or absent.
+`os_container_infra_state` must be either present, absent, query or upgrade.
 
 `os_container_infra_cluster_name` is the name of the cluster.
 
@@ -33,10 +33,9 @@ the cluster.
 
 `os_container_infra_node_count` is the number of worker nodes.
 
-`os_container_infra_external_interface` is the interface on which a cluster can
-be accessed externally.
+`os_container_infra_default_interface` is the default network to use to reach the cluster.
 
-`os_container_infra_interfaces` is a list of additional network interfaces to.
+`os_container_infra_interfaces` is a list of additional networks to attach to cluster nodes.
 
 `os_container_infra_inventory` is the destination where the inventory will be saved to.
 attach to the servers in a cluster since Magnum only allows attachment of one
@@ -46,6 +45,12 @@ network interface by default.
 which all cluster hosts and localhost will be added. This can be useful if
 there is a single group that represents an environment such as
 development/staging/production.
+
+`os_container_infra_coe` is container orchestration engine to use. Valid
+options are `kubernetes` or `swarm`.
+
+`os_container_infra_k8s_version` is a configurable Kubernetes version to use when
+`os_container_infra_state = upgrade`.
 
 Example Playbook
 ----------------
@@ -60,30 +65,25 @@ available in the environment variables (which is the default behaviour):
       gather_facts: False
       roles:
       - role: stackhpc.os-container-infra
-        os_container_infra_auth_type: environment # default behaviour
-        # container specific variables
         os_container_infra_user: fedora
         os_container_infra_state: present
-        os_container_infra_cluster_name: test-cluster
-        os_container_infra_cluster_template_name: swarm-fedora-atomic-27
-        os_container_infra_keypair: default
-        os_container_infra_master_count: 1
-        os_container_infra_node_count: 1
-        os_container_infra_external_interface: p3-internal
-        os_container_infra_interfaces:
-        - p3-lln
-        - p3-bdn
+        os_container_infra_cluster_name: k8s
+        os_container_infra_cluster_template_name: k8s-fa29
+        os_container_infra_roles:
+        - name: storage_client
+          groups: ["{{ os_container_infra_worker_group }}"]
+        os_container_infra_keypair: bharat
+        os_container_infra_default_interface: default
+        os_container_infra_master_group:
+          - name: master
+            count: 1
+        os_container_infra_worker_group:
+          - name: minion
+            count: 2
     ...
 
-To authenticate using information passed via playbook:
+To authenticate using information passed via playbook, supply a dictionary variable as given:
 
-    ---
-    - hosts: localhost
-      become: False
-      gather_facts: False
-      roles:
-      - role: stackhpc.os-container-infra
-        os_container_infra_auth_type: password
         os_container_infra_auth:
           auth_url: http://10.60.253.1:5000
           project_name: p3
@@ -92,36 +92,26 @@ To authenticate using information passed via playbook:
           user_domain_name: Default
           project_domain_name: Default
           region_name: RegionOne
-        # ...container specific variables
-    ...
 
-To authenticate using the information stored in `.config/openstack/clouds.yaml`
-which can be generated using our `stackhpc.os-config` role:
+To authenticate using the information stored inside
+`.config/openstack/clouds.yaml` or `/etc/openstack/clouds.yaml` which can be
+generated using our `stackhpc.os-config` role, append the following:
 
-    ---
-    - hosts: localhost
-      become: False
-      gather_facts: False
-      roles:
-      - role: stackhpc.os-config
-        os_config_content: |
-          ---
-          clouds:
-            mycloud:
-              auth:
-                auth_url: http://10.60.253.1:5000
-                project_name: p3
-                username: username
-                password: password
-                user_domain_name: Default
-                project_domain_name: Default
-              region: RegionOne
-          ...
-      - role: stackhpc.os-container-infra
         os_container_infra_auth_type: cloud
         os_container_infra_cloud: mycloud
-        # ...container specific variables
-    ...
+
+For upgrades of Kubernetes cluster:
+
+        ---
+        - hosts: cluster
+          gather_facts: False
+          become: yes
+          roles:
+          - role: stackhpc.os-container-infra
+            os_container_infra_state: upgrade
+            os_container_infra_k8s_version: v1.13.4
+            os_container_infra_coe: kubernetes
+        ...
 
 Ansible Debug Info
 ------------------
@@ -135,6 +125,20 @@ following variable before running ansible:
 To filter these warnings:
 
     tail -f ansible.log | grep DEBUG
+
+Known Issues
+------------
+
+The `template` Ansible modules writes an inventory file and it may complain
+about missing `libselinux-python` which is already installed is most Linux
+distros. If thats the case, simply create a symlink to the selinux directory in
+your existing virtual environment:
+
+    ln -s /usr/lib64/python2.7/site-packages/selinux/ venv/lib64/python2.7/site-packages/
+
+For a new virtual environment:
+
+    virtualenv --system-site-packages venv
 
 License
 -------

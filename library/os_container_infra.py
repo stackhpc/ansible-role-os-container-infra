@@ -32,7 +32,7 @@ options:
      type: str
    state:
      description:
-       - Must be `present` or `absent`.
+       - Must be `present`, `query` or `absent`.
      type: str
    cluster_name:
      description:
@@ -103,15 +103,15 @@ class ContainerInfra(object):
         self.result = dict()
 
     def connect(self, **kwargs):
-        if kwargs['auth_type'] == 'environment':
-            self.cloud = openstack.connect()
-        elif kwargs['auth_type'] == 'cloud':
-            self.cloud = openstack.connect(cloud=kwargs['cloud'])
-        elif kwargs['auth_type'] == 'password':
-            self.cloud = openstack.connect(**kwargs['auth'])
+        if kwargs['auth_type'] == 'password':
+            if kwargs['cloud']:
+                self.cloud = openstack.connect(cloud=kwargs['cloud'])
+            elif kwargs['auth']:
+                self.cloud = openstack.connect(**kwargs['auth'])
+            else:
+                self.cloud = openstack.connect()
         else:
-            raise OpenStackAuthConfig('Provided auth_type must be one of [environment, cloud, password].')
-
+            raise OpenStackAuthConfig('Only `password` auth_type is supported.')
         self.cloud.authorize()
         self.client = Client('1', endpoint_override=False, session=self.cloud.session)
 
@@ -124,12 +124,16 @@ class ContainerInfra(object):
                 # Get cluster info or raise WaitCondition if a new one is created.
                 try:
                     self.result = self.client.clusters.get(self.name).to_dict()
+                    if self.state == 'query':
+                        return changed
                 except NotFound as e:
                     # Create new cluster here if no cluster with the name was found
                     if self.state == 'present':
                         self.create()
-                    elif self.state == 'absent':
+                    elif self.state in ['absent']:
                         return changed
+                    else:
+                        raise(e)
                 status = self.result['status']
                 # If the cluster is in a failed status, raise error:
                 if status.endswith('FAILED'):
@@ -145,12 +149,12 @@ class ContainerInfra(object):
                 else:
                     raise OpenStackError(self.result['faults'])
             except WaitCondition as e:
-                # This is taking far too long, terminate.
                 now = time.time()
                 if now > start + timeout:
+                    # This is taking far too long, terminate.
                     raise OpenStackError("Timed out waiting for creation after {} seconds.".format(timeout))
-                # Wait before trying again.
                 else:
+                    # Wait before trying again.
                     display.debug('[DEBUG] Waited {}/{} seconds {}'.format(now - start, timeout, e))
                     time.sleep(10)
                     changed = True
@@ -203,8 +207,8 @@ if __name__ == '__main__':
         argument_spec = dict(
             cloud=dict(required=False, type='str'),
             auth=dict(required=False, type='dict'),
-            auth_type=dict(default='environment', required=False, type='str'),
-            state=dict(default='present', choices=['present','absent']),
+            auth_type=dict(default='password', required=False, type='str'),
+            state=dict(default='present', choices=['present','absent', 'query']),
             cluster_name=dict(required=True, type='str'),
             cluster_template_name=dict(required=True, type='str'),
             master_count=dict(required=True, type='int'),

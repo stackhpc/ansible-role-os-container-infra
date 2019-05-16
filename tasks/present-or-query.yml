@@ -1,0 +1,33 @@
+---
+- name: Get stack facts and load them into stack_facts
+  os_stack_resources:
+    auth_type: "{{ os_container_infra_auth_type or omit }}"
+    auth: "{{ os_container_infra_auth or omit }}"
+    cloud: "{{ os_container_infra_cloud or omit }}"
+    name: "{{ container_infra.stack_id }}"
+    max_depth: 2
+    filters:
+      resource_type: 'OS::Nova::Server'
+
+- name: Attach interfaces to servers
+  os_server_interface:
+    auth_type: "{{ os_container_infra_auth_type or omit }}"
+    auth: "{{ os_container_infra_auth or omit }}"
+    cloud: "{{ os_container_infra_cloud or omit }}"
+    state: "{{ os_container_infra_state }}"
+    server_id: "{{ item.get('physical_resource_id') }}"
+    interfaces: "{{ os_container_infra_interfaces }}"
+  with_items: "{{ openstack_stack_resources }}"
+  register: openstack_server_interfaces
+
+- name: Ensure container infra inventory directory exists
+  file:
+    path: "{{ os_container_infra_inventory | dirname }}"
+    state: directory
+  when: os_container_infra_inventory is defined
+
+- name: Generate cluster inventory
+  template:
+    src: inventory-container-infra.j2
+    dest: "{{ os_container_infra_inventory }}"
+...
