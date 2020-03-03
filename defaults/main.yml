@@ -7,17 +7,20 @@ os_container_infra_coe: "kubernetes" # can also be swarm-mode
 
 # Options required when state is present, query or absent
 # -------------------------------------------------------
+os_container_infra_image:
 os_container_infra_auth_type:
 os_container_infra_auth:
 os_container_infra_cloud:
 os_container_infra_user:
 os_container_infra_environment_group:
-os_container_infra_cluster_name:
-os_container_infra_cluster_template_name:
+os_container_infra_name:
+os_container_infra_template_name:
+os_container_infra_template_id:
 os_container_infra_keypair:
 os_container_infra_interfaces: []
+os_container_infra_labels:
 os_container_infra_default_interface: "{{ os_container_infra_external_interface }}"
-os_container_infra_inventory: "{{ playbook_dir }}/inventory-{{ os_container_infra_cluster_name }}"
+os_container_infra_inventory: "{{ playbook_dir }}/inventory-{{ os_container_infra_name }}"
 os_container_infra_host_key_checking: false
 os_container_infra_master_group:
   name: "master"

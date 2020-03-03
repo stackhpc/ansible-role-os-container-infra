@@ -4,7 +4,7 @@
     auth_type: "{{ os_container_infra_auth_type or omit }}"
     auth: "{{ os_container_infra_auth or omit }}"
     cloud: "{{ os_container_infra_cloud or omit }}"
-    name: "{{ container_infra.stack_id }}"
+    name: "{{ container_infra.cluster.stack_id }}"
     max_depth: 2
     filters:
       resource_type: 'OS::Nova::Server'
